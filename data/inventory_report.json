@@ -1,0 +1,438 @@
+{
+  "total_images": 14710,
+  "total_fruits": 478,
+  "batch_size": 250,
+  "total_batches": 59,
+  "last_batch_count": 210,
+  "groups_distribution": {
+    "T10": 8866,
+    "T20": 2920,
+    "Tam": 2924
+  },
+  "views_distribution": {
+    "a": 7355,
+    "b": 7355
+  },
+  "ripening_distribution": {
+    "1": 3568,
+    "2": 2228,
+    "3": 2756,
+    "4": 3294,
+    "5": 2864
+  },
+  "batches_summary": [
+    {
+      "batch_id": 1,
+      "count": 250,
+      "first_image": "T10_d01_002_a_1.jpg",
+      "last_image": "T10_d21_012_b_5.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 2,
+      "count": 250,
+      "first_image": "T10_d22_012_a_5.jpg",
+      "last_image": "T10_d16_021_b_3.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 3,
+      "count": 250,
+      "first_image": "T10_d17_021_a_4.jpg",
+      "last_image": "T10_d03_035_b_1.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 4,
+      "count": 250,
+      "first_image": "T10_d04_035_a_1.jpg",
+      "last_image": "T10_d02_048_b_1.jpg",
+      "unique_fruits": 9
+    },
+    {
+      "batch_id": 5,
+      "count": 250,
+      "first_image": "T10_d03_048_a_1.jpg",
+      "last_image": "T10_d08_067_b_1.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 6,
+      "count": 250,
+      "first_image": "T10_d09_067_a_2.jpg",
+      "last_image": "T10_d10_087_b_3.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 7,
+      "count": 250,
+      "first_image": "T10_d11_087_a_3.jpg",
+      "last_image": "T10_d05_096_b_1.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 8,
+      "count": 250,
+      "first_image": "T10_d06_096_a_1.jpg",
+      "last_image": "T10_d12_108_b_3.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 9,
+      "count": 250,
+      "first_image": "T10_d13_108_a_3.jpg",
+      "last_image": "T10_d06_122_b_1.jpg",
+      "unique_fruits": 8
+    },
+    {
+      "batch_id": 10,
+      "count": 250,
+      "first_image": "T10_d07_122_a_1.jpg",
+      "last_image": "T10_d01_131_b_1.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 11,
+      "count": 250,
+      "first_image": "T10_d02_131_a_1.jpg",
+      "last_image": "T10_d22_145_b_5.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 12,
+      "count": 250,
+      "first_image": "T10_d23_145_a_5.jpg",
+      "last_image": "T10_d04_165_b_1.jpg",
+      "unique_fruits": 8
+    },
+    {
+      "batch_id": 13,
+      "count": 250,
+      "first_image": "T10_d05_165_a_1.jpg",
+      "last_image": "T10_d25_172_b_5.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 14,
+      "count": 250,
+      "first_image": "T10_d26_172_a_5.jpg",
+      "last_image": "T10_d22_196_b_4.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 15,
+      "count": 250,
+      "first_image": "T10_d23_196_a_4.jpg",
+      "last_image": "T10_d17_213_b_3.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 16,
+      "count": 250,
+      "first_image": "T10_d18_213_a_4.jpg",
+      "last_image": "T10_d02_223_b_1.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 17,
+      "count": 250,
+      "first_image": "T10_d03_223_a_1.jpg",
+      "last_image": "T10_d06_236_b_1.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 18,
+      "count": 250,
+      "first_image": "T10_d07_236_a_1.jpg",
+      "last_image": "T10_d10_252_b_2.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 19,
+      "count": 250,
+      "first_image": "T10_d11_252_a_2.jpg",
+      "last_image": "T10_d22_269_b_4.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 20,
+      "count": 250,
+      "first_image": "T10_d23_269_a_4.jpg",
+      "last_image": "T10_d17_283_b_5.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 21,
+      "count": 250,
+      "first_image": "T10_d18_283_a_5.jpg",
+      "last_image": "T10_d12_295_b_3.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 22,
+      "count": 250,
+      "first_image": "T10_d13_295_a_3.jpg",
+      "last_image": "T10_d11_315_b_2.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 23,
+      "count": 250,
+      "first_image": "T10_d12_315_a_2.jpg",
+      "last_image": "T10_d23_330_b_4.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 24,
+      "count": 250,
+      "first_image": "T10_d24_330_a_4.jpg",
+      "last_image": "T10_d25_338_b_5.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 25,
+      "count": 250,
+      "first_image": "T10_d01_349_a_1.jpg",
+      "last_image": "T10_d26_355_b_5.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 26,
+      "count": 250,
+      "first_image": "T10_d01_357_a_1.jpg",
+      "last_image": "T10_d17_372_b_3.jpg",
+      "unique_fruits": 8
+    },
+    {
+      "batch_id": 27,
+      "count": 250,
+      "first_image": "T10_d18_372_a_3.jpg",
+      "last_image": "T10_d05_382_b_1.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 28,
+      "count": 250,
+      "first_image": "T10_d06_382_a_1.jpg",
+      "last_image": "T10_d26_393_b_5.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 29,
+      "count": 250,
+      "first_image": "T10_d01_395_a_1.jpg",
+      "last_image": "T10_d26_401_b_5.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 30,
+      "count": 250,
+      "first_image": "T10_d01_402_a_1.jpg",
+      "last_image": "T10_d21_410_b_4.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 31,
+      "count": 250,
+      "first_image": "T10_d22_410_a_4.jpg",
+      "last_image": "T10_d15_420_b_3.jpg",
+      "unique_fruits": 7
+    },
+    {
+      "batch_id": 32,
+      "count": 250,
+      "first_image": "T10_d16_420_a_3.jpg",
+      "last_image": "T10_d10_442_b_2.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 33,
+      "count": 250,
+      "first_image": "T10_d11_442_a_2.jpg",
+      "last_image": "T10_d05_448_b_2.jpg",
+      "unique_fruits": 6
+    },
+    {
+      "batch_id": 34,
+      "count": 250,
+      "first_image": "T10_d06_448_a_3.jpg",
+      "last_image": "T10_d26_452_b_5.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 35,
+      "count": 250,
+      "first_image": "T10_d01_454_a_1.jpg",
+      "last_image": "T10_d21_471_b_4.jpg",
+      "unique_fruits": 5
+    },
+    {
+      "batch_id": 36,
+      "count": 250,
+      "first_image": "T10_d22_471_a_4.jpg",
+      "last_image": "T20_d03_020_b_1.jpg",
+      "unique_fruits": 11
+    },
+    {
+      "batch_id": 37,
+      "count": 250,
+      "first_image": "T20_d04_020_a_1.jpg",
+      "last_image": "T20_d03_060_b_2.jpg",
+      "unique_fruits": 14
+    },
+    {
+      "batch_id": 38,
+      "count": 250,
+      "first_image": "T20_d04_060_a_3.jpg",
+      "last_image": "T20_d04_106_b_2.jpg",
+      "unique_fruits": 15
+    },
+    {
+      "batch_id": 39,
+      "count": 250,
+      "first_image": "T20_d05_106_a_3.jpg",
+      "last_image": "T20_d03_150_b_2.jpg",
+      "unique_fruits": 14
+    },
+    {
+      "batch_id": 40,
+      "count": 250,
+      "first_image": "T20_d04_150_a_2.jpg",
+      "last_image": "T20_d04_187_b_2.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 41,
+      "count": 250,
+      "first_image": "T20_d05_187_a_3.jpg",
+      "last_image": "T20_d10_228_b_5.jpg",
+      "unique_fruits": 12
+    },
+    {
+      "batch_id": 42,
+      "count": 250,
+      "first_image": "T20_d11_228_a_5.jpg",
+      "last_image": "T20_d03_267_b_2.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 43,
+      "count": 250,
+      "first_image": "T20_d04_267_a_3.jpg",
+      "last_image": "T20_d08_309_b_4.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 44,
+      "count": 250,
+      "first_image": "T20_d09_309_a_4.jpg",
+      "last_image": "T20_d11_352_b_5.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 45,
+      "count": 250,
+      "first_image": "T20_d01_354_a_1.jpg",
+      "last_image": "T20_d08_389_b_4.jpg",
+      "unique_fruits": 12
+    },
+    {
+      "batch_id": 46,
+      "count": 250,
+      "first_image": "T20_d09_389_a_4.jpg",
+      "last_image": "T20_d09_435_b_4.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 47,
+      "count": 250,
+      "first_image": "T20_d10_435_a_5.jpg",
+      "last_image": "T20_d04_469_b_2.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 48,
+      "count": 250,
+      "first_image": "T20_d05_469_a_3.jpg",
+      "last_image": "Tam_d03_057_b_2.jpg",
+      "unique_fruits": 14
+    },
+    {
+      "batch_id": 49,
+      "count": 250,
+      "first_image": "Tam_d04_057_a_3.jpg",
+      "last_image": "Tam_d01_088_b_1.jpg",
+      "unique_fruits": 14
+    },
+    {
+      "batch_id": 50,
+      "count": 250,
+      "first_image": "Tam_d02_088_a_1.jpg",
+      "last_image": "Tam_d04_142_b_3.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 51,
+      "count": 250,
+      "first_image": "Tam_d05_142_a_3.jpg",
+      "last_image": "Tam_d01_175_b_1.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 52,
+      "count": 250,
+      "first_image": "Tam_d02_175_a_1.jpg",
+      "last_image": "Tam_d05_203_b_2.jpg",
+      "unique_fruits": 12
+    },
+    {
+      "batch_id": 53,
+      "count": 250,
+      "first_image": "Tam_d06_203_a_3.jpg",
+      "last_image": "Tam_d04_246_b_3.jpg",
+      "unique_fruits": 15
+    },
+    {
+      "batch_id": 54,
+      "count": 250,
+      "first_image": "Tam_d05_246_a_4.jpg",
+      "last_image": "Tam_d09_280_b_4.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 55,
+      "count": 250,
+      "first_image": "Tam_d10_280_a_5.jpg",
+      "last_image": "Tam_d04_312_b_2.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 56,
+      "count": 250,
+      "first_image": "Tam_d05_312_a_2.jpg",
+      "last_image": "Tam_d05_344_b_4.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 57,
+      "count": 250,
+      "first_image": "Tam_d06_344_a_4.jpg",
+      "last_image": "Tam_d10_403_b_5.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 58,
+      "count": 250,
+      "first_image": "Tam_d11_403_a_5.jpg",
+      "last_image": "Tam_d03_441_b_2.jpg",
+      "unique_fruits": 13
+    },
+    {
+      "batch_id": 59,
+      "count": 210,
+      "first_image": "Tam_d04_441_a_3.jpg",
+      "last_image": "Tam_d11_474_b_5.jpg",
+      "unique_fruits": 10
+    }
+  ]
+}

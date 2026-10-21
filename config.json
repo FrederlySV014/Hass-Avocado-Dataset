@@ -1,0 +1,17 @@
+{
+  "dataset_images_dir": "Avocado Ripening Dataset",
+  "excel_metadata_path": "Avocado Ripening Dataset.xlsx",
+  "batch_size": 250,
+  "inventory_json_path": "data/inventory.json",
+  "inventory_csv_path": "data/inventory.csv",
+  "inventory_report_path": "data/inventory_report.json",
+  "decisions_path": "data/decisions.json",
+  "history_path": "data/history.jsonl",
+  "session_path": "data/session.json",
+  "batch_summaries_path": "data/batch_summaries.json",
+  "thumbnail_cache_dir": "data/cache/thumbnails",
+  "export_dir": "clasificado",
+  "protocol_version": "v1.0",
+  "server_host": "127.0.0.1",
+  "server_port": 5000
+}

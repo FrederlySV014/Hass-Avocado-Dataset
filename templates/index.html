@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clasificador de Palta Hass — Tesis Detección de Roña</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="theme-dark">
+
+  <!-- TOP HEADER -->
+  <header class="top-nav" id="top-nav">
+    <div class="nav-brand">
+      <div class="brand-badge">TESIS UNPRG / USS • AGROEXPORTACIÓN LAMBAYEQUE</div>
+      <h1 class="brand-title">Detección de Roña en Palta Hass <span>| Clasificador Visual</span></h1>
+    </div>
+
+    <!-- STATS COUNTERS -->
+    <div class="nav-metrics">
+      <div class="metric-card" title="Total de imágenes clasificadas en el dataset">
+        <span class="metric-label">Progreso Dataset</span>
+        <div class="metric-value-row">
+          <span class="metric-num" id="global-reviewed-count">0</span>
+          <span class="metric-denom">/ 14,710</span>
+          <span class="metric-pct" id="global-reviewed-pct">0.0%</span>
+        </div>
+        <div class="metric-progress-bar">
+          <div class="metric-progress-fill" id="global-progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="metric-card" title="Frutas únicas que tienen al menos una fotografía revisada">
+        <span class="metric-label">Frutas Revisadas</span>
+        <div class="metric-value-row">
+          <span class="metric-num" id="global-fruits-count">0</span>
+          <span class="metric-denom">/ 478</span>
+        </div>
+        <span class="metric-sub">Entidades únicas</span>
+      </div>
+
+      <div class="metric-badge-group">
+        <div class="badge-metric badge-r" title="R — Con defecto objetivo visible">
+          <span class="b-cat">R</span>
+          <span class="b-val" id="global-count-r">0</span>
+        </div>
+        <div class="badge-metric badge-s" title="S — Sin defecto objetivo visible">
+          <span class="b-cat">S</span>
+          <span class="b-val" id="global-count-s">0</span>
+        </div>
+        <div class="badge-metric badge-d" title="D — Dudosa">
+          <span class="b-cat">D</span>
+          <span class="b-val" id="global-count-d">0</span>
+        </div>
+        <div class="badge-metric badge-x" title="X — Descartada / no utilizable">
+          <span class="b-cat">X</span>
+          <span class="b-val" id="global-count-x">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="nav-actions">
+      <button class="btn-nav" id="btn-open-protocol" title="Consultar el Protocolo Técnico de Revisión (R, S, D, X)">
+        <span class="nav-icon">📖</span> Protocolo
+      </button>
+      <button class="btn-nav" id="btn-undo-header" title="Deshacer última decisión (Ctrl + Z)">
+        <span class="nav-icon">↩️</span> Deshacer
+      </button>
+      <button class="btn-nav btn-export" id="btn-export-header" title="Exportar imágenes clasificadas a carpetas de disco">
+        <span class="nav-icon">📁</span> Exportar
+      </button>
+    </div>
+  </header>
+
+  <!-- BATCH CONTROL BAR -->
+  <div class="batch-bar" id="batch-bar">
+    <div class="batch-selector-wrap">
+      <button class="btn-batch-step" id="btn-prev-batch" title="Ir al lote anterior">◀ Lote Ant.</button>
+      <div class="batch-dropdown-container">
+        <span class="batch-tag">LOTE ACTIVO:</span>
+        <select id="batch-select" class="batch-dropdown" title="Seleccionar lote de trabajo (250 imágenes por lote)"></select>
+      </div>
+      <button class="btn-batch-step" id="btn-next-batch" title="Ir al siguiente lote">Lote Sig. ▶</button>
+    </div>
+
+    <!-- BATCH STATUS PILLS -->
+    <div class="batch-status-pills">
+      <span class="pill-stat pill-total" id="batch-stat-total">Total: 250</span>
+      <span class="pill-stat pill-pending" id="batch-stat-pending">Pendientes: 250</span>
+      <span class="pill-stat pill-r" id="batch-stat-r">R: 0</span>
+      <span class="pill-stat pill-s" id="batch-stat-s">S: 0</span>
+      <span class="pill-stat pill-d" id="batch-stat-d">D: 0</span>
+      <span class="pill-stat pill-x" id="batch-stat-x">X: 0</span>
+    </div>
+
+    <!-- FILTER BUTTONS -->
+    <div class="filter-group" id="filter-group">
+      <button class="filter-btn active" data-filter="all" id="filter-all">Todos (250)</button>
+      <button class="filter-btn" data-filter="pending" id="filter-pending">Pendientes</button>
+      <button class="filter-btn f-r" data-filter="R" id="filter-r">R (Con Defecto)</button>
+      <button class="filter-btn f-s" data-filter="S" id="filter-s">S (Sin Defecto)</button>
+      <button class="filter-btn f-d" data-filter="D" id="filter-d">D (Dudosas)</button>
+      <button class="filter-btn f-x" data-filter="X" id="filter-x">X (Descartadas)</button>
+    </div>
+
+    <!-- VIEW TOGGLE -->
+    <div class="view-mode-toggle">
+      <button class="btn-mode active" id="btn-mode-inspect" title="Vista de Inspección Detallada con Zoom y Comparación">
+        🔍 Inspección
+      </button>
+      <button class="btn-mode" id="btn-mode-gallery" title="Galería completa del Lote">
+        ▦ Galería (250)
+      </button>
+    </div>
+  </div>
+
+  <!-- BATCH COMPLETED BANNER -->
+  <div class="batch-completed-banner" id="batch-completed-banner" style="display: none;">
+    <div class="banner-content">
+      <span class="banner-icon">🎉</span>
+      <div class="banner-text">
+        <strong>¡Lote actual completado al 100%!</strong>
+        <span>Todas las imágenes de este lote tienen una decisión registrada (0 pendientes).</span>
+      </div>
+      <button class="btn-continue-batch" id="btn-banner-continue-batch">
+        Continuar al Siguiente Lote ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="workspace-container" id="workspace">
+
+    <!-- VIEW: INSPECTOR (MAIN DETAIL VIEW) -->
+    <section class="inspector-section" id="inspector-view">
+      
+      <!-- IMAGE DISPLAY STAGE -->
+      <div class="viewer-stage-wrapper">
+        
+        <!-- TOP STAGE BAR -->
+        <div class="stage-header">
+          <div class="image-meta-info">
+            <span class="badge-index" id="current-badge-index">#1 / 250</span>
+            <span class="image-name-heading" id="current-image-name">Cargando...</span>
+            <span class="badge-status-current" id="current-category-badge">PENDIENTE</span>
+          </div>
+
+          <div class="stage-controls">
+            <button class="ctrl-btn" id="btn-zoom-in" title="Acercar (+)">➕</button>
+            <button class="ctrl-btn" id="btn-zoom-out" title="Alejar (-)">➖</button>
+            <button class="ctrl-btn" id="btn-zoom-fit" title="Ajustar a Pantalla (100%)">⛶ Ajustar</button>
+            <button class="ctrl-btn" id="btn-zoom-reset" title="Restablecer Posición">↺ Centrar</button>
+            <div class="zoom-level-tag" id="zoom-level-text">100%</div>
+          </div>
+        </div>
+
+        <!-- CANVAS / IMAGE VIEWPORT -->
+        <div class="viewport-canvas" id="viewport-canvas">
+          <div class="image-transform-container" id="transform-container">
+            <img id="main-inspect-image" src="" alt="Fotografía de Palta Hass" draggable="false">
+          </div>
+          <div class="loading-overlay" id="image-loading-overlay">
+            <div class="spinner"></div>
+            <span>Cargando imagen en alta resolución...</span>
+          </div>
+          <!-- NAVIGATION CHEVRONS -->
+          <button class="nav-arrow nav-arrow-left" id="btn-nav-prev" title="Imagen anterior (Flecha Izquierda ←)">❮</button>
+          <button class="nav-arrow nav-arrow-right" id="btn-nav-next" title="Siguiente imagen (Flecha Derecha →)">❯</button>
+        </div>
+
+        <!-- QUICK THUMBNAILS CAROUSEL OF CURRENT BATCH -->
+        <div class="batch-quick-strip" id="batch-quick-strip">
+          <!-- Mini carrusel horizontal para saltar rápidamente entre las fotos del lote -->
+        </div>
+
+      </div>
+
+      <!-- RIGHT SIDEBAR: CLASSIFICATION & COMPARISON -->
+      <aside class="sidebar-panel" id="sidebar-panel">
+
+        <!-- METADATA CARD -->
+        <div class="side-card metadata-card">
+          <h3 class="card-title">Metadatos de la Muestra</h3>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-k">Fruta Única:</span>
+              <span class="meta-v highlight-fruit" id="meta-fruit-id">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-k">Grupo:</span>
+              <span class="meta-v" id="meta-storage-group">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-k">Día Exp.:</span>
+              <span class="meta-v" id="meta-day">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-k">Vista:</span>
+              <span class="meta-v highlight-view" id="meta-view">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-k">Maduración:</span>
+              <span class="meta-v" id="meta-ripening">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-k">Fecha/Hora:</span>
+              <span class="meta-v" id="meta-timestamp">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLASSIFICATION DECISION BUTTONS -->
+        <div class="side-card action-card">
+          <div class="card-header-row">
+            <h3 class="card-title">Asignar Categoría</h3>
+            <span class="shortcut-tip">Usa atajos [R, S, D, X]</span>
+          </div>
+
+          <div class="decision-buttons-grid">
+            <button class="btn-decision btn-r" id="btn-action-r" title="Presiona [R] para clasificar como Con Defecto">
+              <div class="btn-top">
+                <span class="key-shortcut">R</span>
+                <span class="btn-title">Con Defecto Visible</span>
+              </div>
+              <span class="btn-desc">Lesión suberosa compatible con roña (Provisional)</span>
+            </button>
+
+            <button class="btn-decision btn-s" id="btn-action-s" title="Presiona [S] para clasificar como Sin Defecto">
+              <div class="btn-top">
+                <span class="key-shortcut">S</span>
+                <span class="btn-title">Sin Defecto Visible</span>
+              </div>
+              <span class="btn-desc">No se observa la lesión objetivo en esta toma</span>
+            </button>
+
+            <button class="btn-decision btn-d" id="btn-action-d" title="Presiona [D] para marcar como Dudosa">
+              <div class="btn-top">
+                <span class="key-shortcut">D</span>
+                <span class="btn-title">Dudosa / Incierta</span>
+              </div>
+              <span class="btn-desc">Incertidumbre visual. Requiere 2da revisión</span>
+            </button>
+
+            <button class="btn-decision btn-x" id="btn-action-x" title="Presiona [X] para Descartar con Motivo">
+              <div class="btn-top">
+                <span class="key-shortcut">X</span>
+                <span class="btn-title">Descartada</span>
+              </div>
+              <span class="btn-desc">Desenfoque, oclusión o daño no evaluable</span>
+            </button>
+          </div>
+
+          <!-- OPTIONAL NOTE & CURRENT STATUS -->
+          <div class="note-box-container">
+            <label for="input-decision-note" class="note-label">Nota u Observación (Opcional):</label>
+            <input type="text" id="input-decision-note" class="input-note" placeholder="Ej. Lesión acorchada en pedúnculo, mancha apical...">
+          </div>
+
+          <!-- AUTO-ADVANCE TOGGLE -->
+          <div class="advance-toggle-wrap">
+            <label class="toggle-label" title="Avanzar a la siguiente imagen pendiente inmediatamente tras guardar">
+              <input type="checkbox" id="chk-auto-advance" checked>
+              <span>Avanzar automáticamente a la siguiente pendiente</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- MULTIVIEW & TEMPORAL COMPARISON OF THE SAME FRUIT -->
+        <div class="side-card comparison-card">
+          <div class="card-header-row">
+            <h3 class="card-title">Comparativa de la Fruta</h3>
+            <span class="badge-count" id="comparison-count-tag">0 fotos</span>
+          </div>
+          <p class="comparison-hint">Otras tomas (vista contralateral y evolución temporal) de este mismo fruto:</p>
+          <div class="comparison-gallery" id="comparison-gallery">
+            <!-- Miniaturas comparativas de la misma fruta -->
+          </div>
+        </div>
+
+      </aside>
+
+    </section>
+
+    <!-- VIEW: FULL BATCH GALLERY (GRID OF 250) -->
+    <section class="gallery-section" id="gallery-view" style="display: none;">
+      <div class="gallery-toolbar">
+        <div class="gallery-info">
+          <h2>Galería del Lote <span id="gallery-batch-num">1</span></h2>
+          <span class="gallery-count" id="gallery-items-count">Mostrando 250 imágenes</span>
+        </div>
+        <div class="gallery-actions">
+          <button class="btn-secondary" id="btn-gallery-return-inspect">Volver al Inspector Detallado 🔍</button>
+        </div>
+      </div>
+
+      <div class="gallery-grid" id="gallery-cards-grid">
+        <!-- 250 tarjetas generadas dinámicamente -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: DISCARD MOTIVE (X) -->
+  <div class="modal-backdrop" id="modal-discard" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-icon-badge">⚠️</div>
+        <div>
+          <h2 class="modal-title">Descartar Fotografía (X)</h2>
+          <p class="modal-subtitle">Especifica el motivo técnico por el cual la imagen no es evaluable.</p>
+        </div>
+      </div>
+      
+      <div class="modal-body">
+        <label class="form-label">Motivo Obligatorio:</label>
+        <div class="radio-reasons-list">
+          <label class="radio-card">
+            <input type="radio" name="discard-reason" value="desenfoque" checked>
+            <div class="radio-info">
+              <strong>Desenfoque</strong>
+              <span>Pérdida severa de nitidez en la superficie del fruto</span>
+            </div>
+          </label>
+
+          <label class="radio-card">
+            <input type="radio" name="discard-reason" value="deterioro que impide evaluar">
+            <div class="radio-info">
+              <strong>Deterioro que impide evaluar</strong>
+              <span>Pudrición avanzada o invasión fúngica que enmascara la piel</span>
+            </div>
+          </label>
+
+          <label class="radio-card">
+            <input type="radio" name="discard-reason" value="superficie relevante oculta">
+            <div class="radio-info">
+              <strong>Superficie relevante oculta</strong>
+              <span>Oclusión grave por sombras intensas, fondos u obstáculos</span>
+            </div>
+          </label>
+
+          <label class="radio-card">
+            <input type="radio" name="discard-reason" value="archivo corrupto">
+            <div class="radio-info">
+              <strong>Archivo corrupto</strong>
+              <span>Falla digital o artefactos de compresión irreparables</span>
+            </div>
+          </label>
+
+          <label class="radio-card">
+            <input type="radio" name="discard-reason" value="otro">
+            <div class="radio-info">
+              <strong>Otro motivo</strong>
+              <span>Detalla la causa en el campo inferior</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label for="input-discard-detail" class="form-label">Detalle o especificación:</label>
+          <input type="text" id="input-discard-detail" class="input-text" placeholder="Obligatorio si seleccionas 'Otro'">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" id="btn-cancel-discard">Cancelar (Esc)</button>
+        <button class="btn-confirm-discard" id="btn-confirm-discard">Confirmar Descarte (Enter)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PROTOCOLO TÉCNICO -->
+  <div class="modal-backdrop" id="modal-protocol" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="modal-icon-badge">📋</div>
+        <div>
+          <h2 class="modal-title">Protocolo de Revisión Visual y Clasificación Manual</h2>
+          <p class="modal-subtitle">Detección de Roña en Palta Hass (Lambayeque) • Versión v1.0</p>
+        </div>
+        <button class="modal-close" id="btn-close-protocol">✕</button>
+      </div>
+      <div class="modal-body modal-scrollable" id="protocol-content-body">
+        <div class="protocol-loading">Cargando protocolo...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="btn-ok-protocol">Entendido y Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EXPORT REPORT -->
+  <div class="modal-backdrop" id="modal-export" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-icon-badge">📦</div>
+        <div>
+          <h2 class="modal-title">Exportación de Fotografías Clasificadas</h2>
+          <p class="modal-subtitle">Copia directa hacia las carpetas organizadas en disco</p>
+        </div>
+        <button class="modal-close" id="btn-close-export">✕</button>
+      </div>
+      <div class="modal-body" id="export-modal-body">
+        <div class="export-spinner-wrap" id="export-spinner" style="display: none;">
+          <div class="spinner"></div>
+          <p>Copiando y sincronizando fotografías en el disco...</p>
+        </div>
+        <div id="export-results-area">
+          <p>Se copiarán todas las imágenes con decisión registrada a sus respectivas carpetas dentro de <code>clasificado/</code>:</p>
+          <ul class="export-list-preview">
+            <li><strong>clasificado/con_defecto/</strong> (Bandeja R)</li>
+            <li><strong>clasificado/sin_defecto/</strong> (Bandeja S)</li>
+            <li><strong>clasificado/dudosas/</strong> (Bandeja D)</li>
+            <li><strong>clasificado/descartadas/</strong> (Bandeja X)</li>
+          </ul>
+          <p class="note-warn">⚠️ Las imágenes reclasificadas se actualizarán limpiando copias obsoletas. Las pendientes no serán copiadas.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="btn-cancel-export-dialog">Cerrar</button>
+        <button class="btn-confirm-export" id="btn-run-export-action">Iniciar Exportación Ahora</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- SCRIPT -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
