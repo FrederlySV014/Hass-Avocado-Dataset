@@ -39,12 +39,40 @@ class DecisionManager:
             "current_batch_id": 1,
             "current_image_id": None,
             "active_filter": "all",
+            "active_phase": "phase1",
+            "phase2_category": "R",
+            "phase2_image_id": None,
             "last_updated": datetime.datetime.utcnow().isoformat() + "Z"
         }
 
         self._load_decisions()
         self._load_batch_summaries()
         self._load_session()
+        self._build_undo_stack()
+
+    def _build_undo_stack(self) -> None:
+        """
+        Reconstruye la pila en memoria de acciones reversibles a partir de la bitácora history.jsonl.
+        Permite deshacer múltiples pasos consecutivos de manera persistente tras reinicios.
+        """
+        self.undo_stack: List[Dict[str, Any]] = []
+        if not os.path.exists(self.history_path):
+            return
+        try:
+            with open(self.history_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    entry = json.loads(line)
+                    action = entry.get("action")
+                    if action in ("classify", "reclassify", "phase2_keep", "phase2_discard", "phase2_transfer"):
+                        self.undo_stack.append(entry)
+                    elif action == "undo":
+                        if self.undo_stack:
+                            self.undo_stack.pop()
+        except Exception as e:
+            print(f"[ERROR] Error al reconstruir undo_stack desde {self.history_path}: {e}")
 
     def _load_config(self) -> Dict[str, Any]:
         if os.path.exists(self.config_path):
@@ -77,7 +105,8 @@ class DecisionManager:
         if os.path.exists(self.session_path):
             try:
                 with open(self.session_path, "r", encoding="utf-8") as f:
-                    self.session_state = json.load(f)
+                    data = json.load(f)
+                    self.session_state.update(data)
             except Exception:
                 pass
 
@@ -131,10 +160,6 @@ class DecisionManager:
         if category not in VALID_CATEGORIES:
             raise ValueError(f"Categoría inválida '{category}'. Debe ser una de: {sorted(list(VALID_CATEGORIES))}")
 
-        if category == "X":
-            if not reason or not reason.strip():
-                raise ValueError("Para la categoría 'X (Descartada)', el motivo es obligatorio.")
-
         now_iso = datetime.datetime.utcnow().isoformat() + "Z"
         prev_decision = self.decisions.get(image_id)
 
@@ -165,56 +190,67 @@ class DecisionManager:
             "new_state": decision_data
         }
         self._append_history(history_entry)
+        self.undo_stack.append(history_entry)
 
         return decision_data
 
-    def undo_last_decision(self) -> Optional[Dict[str, Any]]:
+    def undo_last_decision(self, steps: int = 1) -> Optional[Dict[str, Any]]:
         """
-        Revierte la última acción del historial auditable.
+        Revierte hasta `steps` acciones de la pila de deshacer de manera consecutiva.
+        Restaura el estado previo en decisions.json y registra cada evento 'undo' en history.jsonl.
         """
-        if not os.path.exists(self.history_path):
+        if steps < 1:
+            steps = 1
+
+        if not self.undo_stack:
             return None
 
-        # Leer última línea de historial
-        lines = []
-        with open(self.history_path, "r", encoding="utf-8") as f:
-            lines = [l.strip() for l in f if l.strip()]
+        undone_entries = []
+        last_image_id = None
+        last_restored_state = None
+        now_iso = datetime.datetime.utcnow().isoformat() + "Z"
 
-        if not lines:
+        for _ in range(steps):
+            if not self.undo_stack:
+                break
+
+            entry_to_undo = self.undo_stack.pop()
+            image_id = entry_to_undo["image_id"]
+            prev_state = entry_to_undo.get("previous_state")
+
+            if prev_state:
+                self.decisions[image_id] = prev_state
+            else:
+                if image_id in self.decisions:
+                    del self.decisions[image_id]
+
+            undo_record = {
+                "action": "undo",
+                "image_id": image_id,
+                "timestamp": now_iso,
+                "undone_entry": entry_to_undo,
+                "restored_state": prev_state
+            }
+            self._append_history(undo_record)
+
+            undone_entries.append({
+                "image_id": image_id,
+                "restored_state": prev_state
+            })
+            last_image_id = image_id
+            last_restored_state = prev_state
+
+        if not undone_entries:
             return None
-
-        last_entry = json.loads(lines[-1])
-        # Solo revertir acciones normales de clasificación/reclasificación
-        if last_entry.get("action") == "undo":
-            # Si el último fue un undo, buscar la entrada anterior efectiva si fuera necesario,
-            # pero más seguro: revertir lo que hizo el último registro
-            pass
-
-        image_id = last_entry["image_id"]
-        prev_state = last_entry.get("previous_state")
-
-        if prev_state:
-            self.decisions[image_id] = prev_state
-        else:
-            if image_id in self.decisions:
-                del self.decisions[image_id]
 
         self._save_decisions_atomic()
 
-        # Registrar el evento de Undo en el historial
-        now_iso = datetime.datetime.utcnow().isoformat() + "Z"
-        undo_record = {
-            "action": "undo",
-            "image_id": image_id,
-            "timestamp": now_iso,
-            "undone_entry": last_entry,
-            "restored_state": prev_state
-        }
-        self._append_history(undo_record)
-
         return {
-            "image_id": image_id,
-            "restored_state": prev_state
+            "image_id": last_image_id,
+            "restored_state": last_restored_state,
+            "undone_count": len(undone_entries),
+            "undone_items": undone_entries,
+            "remaining_undo_count": len(self.undo_stack)
         }
 
     def get_decision(self, image_id: str) -> Optional[Dict[str, Any]]:
@@ -223,17 +259,193 @@ class DecisionManager:
     def get_all_decisions(self) -> Dict[str, Dict[str, Any]]:
         return self.decisions
 
-    def update_session(self, batch_id: int, image_id: Optional[str] = None, active_filter: str = "all") -> None:
-        self.session_state["current_batch_id"] = int(batch_id)
+    def update_session(
+        self,
+        batch_id: Optional[int] = None,
+        image_id: Optional[str] = None,
+        active_filter: Optional[str] = None,
+        active_phase: Optional[str] = None,
+        phase2_category: Optional[str] = None,
+        phase2_image_id: Optional[str] = None
+    ) -> None:
+        if batch_id is not None:
+            self.session_state["current_batch_id"] = int(batch_id)
         if image_id is not None:
             self.session_state["current_image_id"] = image_id
-        if active_filter:
+        if active_filter is not None:
             self.session_state["active_filter"] = active_filter
+        if active_phase is not None:
+            self.session_state["active_phase"] = active_phase
+        if phase2_category is not None:
+            self.session_state["phase2_category"] = phase2_category
+        if phase2_image_id is not None:
+            self.session_state["phase2_image_id"] = phase2_image_id
         self.session_state["last_updated"] = datetime.datetime.utcnow().isoformat() + "Z"
         self._save_session_atomic()
 
+    def mark_phase2_keep(self, image_id: str) -> Dict[str, Any]:
+        """
+        Confirma que la imagen se mantiene en su categoría actual (R o S) durante la Fase 2.
+        """
+        now_iso = datetime.datetime.utcnow().isoformat() + "Z"
+        current = self.decisions.get(image_id)
+        if not current:
+            raise ValueError(f"No existe decisión previa para {image_id}")
+
+        prev_decision = dict(current)
+        current["phase2_reviewed"] = True
+        current["phase2_action"] = "kept"
+        current["phase2_timestamp"] = now_iso
+
+        self.decisions[image_id] = current
+        self._save_decisions_atomic()
+
+        history_entry = {
+            "action": "phase2_keep",
+            "image_id": image_id,
+            "timestamp": now_iso,
+            "previous_state": prev_decision,
+            "new_state": dict(current)
+        }
+        self._append_history(history_entry)
+        self.undo_stack.append(history_entry)
+        return current
+
+    def mark_phase2_discard(self, image_id: str, note: str = "") -> Dict[str, Any]:
+        """
+        Descarta la imagen en la Fase 2 de balanceo, moviéndola al grupo general de descartadas ('X').
+        """
+        now_iso = datetime.datetime.utcnow().isoformat() + "Z"
+        current = self.decisions.get(image_id)
+        if not current:
+            raise ValueError(f"No existe decisión previa para {image_id}")
+
+        prev_decision = dict(current)
+        decision_data = {
+            "image_id": image_id,
+            "category": "X",
+            "timestamp": now_iso,
+            "note": note.strip() if note else current.get("note", ""),
+            "reason": "descarte_fase2_balanceo",
+            "protocol_version": self.protocol_version,
+            "provisional": False,
+            "phase2_reviewed": True,
+            "phase2_action": "discarded",
+            "phase2_previous_category": current.get("category"),
+            "phase2_timestamp": now_iso
+        }
+
+        self.decisions[image_id] = decision_data
+        self._save_decisions_atomic()
+
+        history_entry = {
+            "action": "phase2_discard",
+            "image_id": image_id,
+            "timestamp": now_iso,
+            "previous_state": prev_decision,
+            "new_state": decision_data
+        }
+        self._append_history(history_entry)
+        self.undo_stack.append(history_entry)
+        return decision_data
+
+    def mark_phase2_transfer(
+        self,
+        image_id: str,
+        target_category: Optional[str] = None,
+        note: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Reclasifica una imagen en Fase 2 transfiriéndola entre los grupos 'R' y 'S'.
+        Corrige clasificaciones erróneas previas (ej. frutas sanas asignadas por error a 'R').
+        """
+        current = self.decisions.get(image_id)
+        if not current:
+            raise ValueError(f"No existe decisión previa para {image_id}")
+
+        curr_cat = current.get("category", "R")
+        if not target_category:
+            target_cat = "S" if curr_cat == "R" else "R"
+        else:
+            target_cat = target_category.strip().upper()
+
+        if target_cat not in ("R", "S"):
+            raise ValueError(f"Categoría de transferencia inválida: '{target_cat}'. Solo se permite transferir a 'R' o 'S'")
+
+        now_iso = datetime.datetime.utcnow().isoformat() + "Z"
+        prev_decision = dict(current)
+
+        decision_data = {
+            "image_id": image_id,
+            "category": target_cat,
+            "timestamp": now_iso,
+            "note": note.strip() if note else current.get("note", ""),
+            "reason": None,
+            "protocol_version": self.protocol_version,
+            "provisional": True,
+            "phase2_reviewed": True,
+            "phase2_action": "transferred",
+            "phase2_previous_category": curr_cat,
+            "phase2_timestamp": now_iso
+        }
+
+        self.decisions[image_id] = decision_data
+        self._save_decisions_atomic()
+
+        history_entry = {
+            "action": "phase2_transfer",
+            "image_id": image_id,
+            "timestamp": now_iso,
+            "previous_state": prev_decision,
+            "new_state": decision_data
+        }
+        self._append_history(history_entry)
+        self.undo_stack.append(history_entry)
+        return decision_data
+
     def get_session(self) -> Dict[str, Any]:
         return self.session_state
+
+    def start_phase2_new_round(self, category: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Inicia una nueva ronda de depuración y curación en Fase 2.
+        Reinicia las marcas 'phase2_reviewed' a False para las imágenes activas en R y/o S,
+        permitiendo una nueva pasada consecutiva desde la foto #1 hasta alcanzar la meta de 1500 por clase.
+        NO afecta a las imágenes descartadas (X) ni a las dudosas (D).
+        """
+        now_iso = datetime.datetime.utcnow().isoformat() + "Z"
+        if category and category.strip().upper() in ("R", "S", "D"):
+            target_cats = {category.strip().upper()}
+        else:
+            target_cats = {"R", "S"}
+
+        reset_count = 0
+        for img_id, dec in self.decisions.items():
+            if dec.get("category") in target_cats:
+                dec["phase2_reviewed"] = False
+                dec["phase2_action"] = None
+                dec["phase2_round_reset_at"] = now_iso
+                reset_count += 1
+
+        self._save_decisions_atomic()
+
+        history_entry = {
+            "action": "phase2_new_round",
+            "categories": list(target_cats),
+            "reset_count": reset_count,
+            "timestamp": now_iso
+        }
+        self._append_history(history_entry)
+
+        # Resetear sesión al inicio del pool
+        self.session_state["phase2_image_id"] = None
+        self._save_session_atomic()
+
+        return {
+            "reset_count": reset_count,
+            "categories": list(target_cats),
+            "timestamp": now_iso
+        }
 
     def record_batch_completion(self, batch_id: int, summary: Dict[str, Any]) -> None:
         str_id = str(batch_id)

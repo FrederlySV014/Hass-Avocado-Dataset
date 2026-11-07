@@ -19,6 +19,14 @@
     isSaving: false,
     viewMode: 'inspect', // 'inspect' | 'gallery'
 
+    // Fase 2: Curación y Balanceo
+    activePhase: 'phase1', // 'phase1' | 'phase2'
+    phase2Category: 'R', // 'R' | 'S'
+    phase2Filter: 'all', // 'all' | 'pending' | 'kept'
+    phase2Items: [],
+    phase2Index: 0,
+    phase2Stats: null,
+
     // Zoom y Pan
     zoom: 1.0,
     panX: 0,
@@ -33,6 +41,48 @@
 
   // --- SELECTORES DOM ---
   const dom = {
+    // Phase Tabs
+    tabPhase1: document.getElementById('tab-phase-1'),
+    tabPhase2: document.getElementById('tab-phase-2'),
+    phase2Bar: document.getElementById('phase2-bar'),
+    batchBar: document.getElementById('batch-bar'),
+
+    // Phase 2 Bar Controls
+    btnPoolR: document.getElementById('btn-pool-r'),
+    btnPoolS: document.getElementById('btn-pool-s'),
+    btnPoolD: document.getElementById('btn-pool-d'),
+    p2PoolRCount: document.getElementById('p2-pool-r-count'),
+    p2PoolSCount: document.getElementById('p2-pool-s-count'),
+    p2PoolDCount: document.getElementById('p2-pool-d-count'),
+    bGoalVal: document.getElementById('b-goal-val'),
+    bDiffVal: document.getElementById('b-diff-val'),
+    bRatioVal: document.getElementById('b-ratio-val'),
+    bStatusBadge: document.getElementById('b-status-badge'),
+    barFillR: document.getElementById('bar-fill-r'),
+    barFillS: document.getElementById('bar-fill-s'),
+    btnP2ResetRound: document.getElementById('btn-p2-reset-round'),
+    p2FilterBtns: document.querySelectorAll('.phase2-filter-group .filter-btn'),
+
+    // Phase 2 Action Card
+    phase1ActionCard: document.getElementById('phase1-action-card'),
+    phase2ActionCard: document.getElementById('phase2-action-card'),
+    phase2CardTitle: document.getElementById('phase2-card-title'),
+    phase2ShortcutTip: document.getElementById('phase2-shortcut-tip'),
+    phase2CurationGrid: document.getElementById('phase2-curation-grid'),
+    phase2DudosaGrid: document.getElementById('phase2-dudosa-grid'),
+    btnP2Keep: document.getElementById('btn-p2-keep'),
+    btnP2Transfer: document.getElementById('btn-p2-transfer'),
+    btnP2Discard: document.getElementById('btn-p2-discard'),
+    btnP2ToR: document.getElementById('btn-p2-to-r'),
+    btnP2ToS: document.getElementById('btn-p2-to-s'),
+    btnP2DiscardD: document.getElementById('btn-p2-discard-d'),
+    btnP2KeepD: document.getElementById('btn-p2-keep-d'),
+    btnP2Undo: document.getElementById('btn-p2-undo'),
+    inputPhase2Note: document.getElementById('input-phase2-note'),
+    chkPhase2AutoAdvance: document.getElementById('chk-phase2-auto-advance'),
+    balanceHintTitle: document.getElementById('balance-hint-title'),
+    balanceHintDesc: document.getElementById('balance-hint-desc'),
+
     // Header Stats
     globalReviewedCount: document.getElementById('global-reviewed-count'),
     globalReviewedPct: document.getElementById('global-reviewed-pct'),
@@ -147,7 +197,11 @@
     setupEventListeners();
     setupTransformHandlers();
     await loadGlobalStatus();
-    await loadBatch(state.currentBatchId);
+    if (state.activePhase === 'phase2') {
+      await switchPhase('phase2');
+    } else {
+      await loadBatch(state.currentBatchId);
+    }
   }
 
   // --- CARGA DE ESTADO GLOBAL Y SESIÓN ---
@@ -163,9 +217,19 @@
       // Poblar selector de lotes
       populateBatchSelect(data.total_batches, data.completed_batches);
 
-      if (data.session && data.session.current_batch_id) {
-        state.currentBatchId = data.session.current_batch_id;
-        dom.batchSelect.value = state.currentBatchId;
+      if (data.session) {
+        if (data.session.current_batch_id) {
+          state.currentBatchId = data.session.current_batch_id;
+          dom.batchSelect.value = state.currentBatchId;
+        }
+        if (data.session.active_phase) {
+          state.activePhase = data.session.active_phase;
+        } else if (data.total_reviewed >= data.total_images) {
+          state.activePhase = 'phase2';
+        }
+        if (data.session.phase2_category) {
+          state.phase2Category = data.session.phase2_category;
+        }
       }
     } catch (e) {
       console.error(e);
@@ -322,7 +386,7 @@
       if (cat === 'R') label = 'R — CON DEFECTO';
       if (cat === 'S') label = 'S — SIN DEFECTO';
       if (cat === 'D') label = 'D — DUDOSA';
-      if (cat === 'X') label = `X — DESCARTADA (${decision.reason || ''})`;
+      if (cat === 'X') label = decision.reason ? `X — DESCARTADA (${decision.reason})` : 'X — DESCARTADA';
       dom.currentCategoryBadge.textContent = label;
     }
   }
@@ -335,17 +399,29 @@
     if (cat === 'X') dom.btnActionX.classList.add('is-current');
   }
 
+  let activeImageLoader = null;
+
   function loadMainImage(url) {
     dom.imageLoadingOverlay.style.display = 'flex';
+    if (activeImageLoader) {
+      activeImageLoader.onload = null;
+      activeImageLoader.onerror = null;
+      activeImageLoader.src = '';
+    }
     const img = new Image();
+    activeImageLoader = img;
     img.onload = () => {
+      if (activeImageLoader !== img) return;
       dom.mainInspectImage.src = url;
       dom.imageLoadingOverlay.style.display = 'none';
       resetTransform();
+      activeImageLoader = null;
     };
     img.onerror = () => {
+      if (activeImageLoader !== img) return;
       dom.imageLoadingOverlay.style.display = 'none';
       showToast('Error al cargar la imagen', 'error');
+      activeImageLoader = null;
     };
     img.src = url;
   }
@@ -432,6 +508,10 @@
   }
 
   function highlightQuickStripActive(imageId) {
+    if (state.activePhase === 'phase2') {
+      renderPhase2QuickStrip();
+      return;
+    }
     document.querySelectorAll('.quick-thumb').forEach(el => el.classList.remove('active'));
     const item = state.currentImage;
     if (item) {
@@ -570,6 +650,7 @@
     }
   }
 
+  // --- AVANCE AUTOMÁTICO Y STATS DE LOTE ---
   function advanceToNextPending() {
     // Buscar la siguiente pendiente hacia adelante
     let nextIdx = -1;
@@ -608,10 +689,405 @@
     }
   }
 
-  // --- DESHACER (UNDO) ---
-  async function performUndo() {
+  // =========================================================================
+  // --- FASE 2: CURACIÓN Y BALANCEO R VS S ---
+  // =========================================================================
+
+  async function switchPhase(phase) {
+    state.activePhase = phase;
+    if (phase === 'phase2') {
+      dom.tabPhase1.classList.remove('active');
+      dom.tabPhase2.classList.add('active');
+      dom.batchBar.style.display = 'none';
+      dom.phase2Bar.style.display = 'flex';
+      dom.phase1ActionCard.style.display = 'none';
+      dom.phase2ActionCard.style.display = 'block';
+      dom.btnModeGallery.style.display = 'none';
+      switchViewMode('inspect');
+      await loadPhase2Pool(state.phase2Category, state.phase2Filter);
+    } else {
+      dom.tabPhase1.classList.add('active');
+      dom.tabPhase2.classList.remove('active');
+      dom.batchBar.style.display = 'flex';
+      dom.phase2Bar.style.display = 'none';
+      dom.phase1ActionCard.style.display = 'block';
+      dom.phase2ActionCard.style.display = 'none';
+      dom.btnModeGallery.style.display = 'block';
+      await loadBatch(state.currentBatchId);
+    }
+    saveSessionState();
+  }
+
+  function updatePoolButtonsUI(cat) {
+    if (dom.btnPoolR) dom.btnPoolR.classList.toggle('active', cat === 'R');
+    if (dom.btnPoolS) dom.btnPoolS.classList.toggle('active', cat === 'S');
+    if (dom.btnPoolD) dom.btnPoolD.classList.toggle('active', cat === 'D');
+  }
+
+  async function loadPhase2Pool(category = 'R', filter = 'all', targetImageId = null) {
     try {
-      const res = await fetch('/api/undo', { method: 'POST' });
+      dom.imageLoadingOverlay.style.display = 'flex';
+      state.phase2Category = category;
+      state.phase2Filter = filter;
+      updatePoolButtonsUI(category);
+
+      const res = await fetch(`/api/phase2/pool?category=${encodeURIComponent(category)}&filter=${encodeURIComponent(filter)}`);
+      if (!res.ok) throw new Error(`Error al cargar pool ${category}`);
+      const data = await res.json();
+
+      state.phase2Items = data.items;
+      state.phase2Stats = data.stats;
+
+      updatePhase2Stats(data.stats);
+
+      if (state.phase2Category === 'D') {
+        if (dom.phase2CurationGrid) dom.phase2CurationGrid.style.display = 'none';
+        if (dom.phase2DudosaGrid) dom.phase2DudosaGrid.style.display = 'flex';
+        if (dom.phase2CardTitle) dom.phase2CardTitle.textContent = 'Resolución de Dudosas (D)';
+        if (dom.phase2ShortcutTip) dom.phase2ShortcutTip.textContent = '[R] Con Defecto • [S] Sin Defecto • [X] Descartar • [M] Mantener';
+      } else {
+        if (dom.phase2CurationGrid) dom.phase2CurationGrid.style.display = 'flex';
+        if (dom.phase2DudosaGrid) dom.phase2DudosaGrid.style.display = 'none';
+        if (dom.phase2CardTitle) dom.phase2CardTitle.textContent = 'Curación de Fase 2';
+        if (dom.phase2ShortcutTip) dom.phase2ShortcutTip.textContent = '[M] Mantener • [S/C] Mover • [X] Descartar';
+        updatePhase2TransferButton();
+      }
+
+      // Seleccionar imagen inicial
+      let initialIndex = 0;
+      if (targetImageId) {
+        const foundIdx = state.phase2Items.findIndex(it => it.image_id === targetImageId);
+        if (foundIdx !== -1) initialIndex = foundIdx;
+      } else {
+        const firstPending = state.phase2Items.findIndex(it => !it.phase2_reviewed);
+        if (firstPending !== -1) initialIndex = firstPending;
+      }
+
+      state.phase2Index = initialIndex;
+
+      // Renderizar tira rápida de fase 2 centrada en la imagen activa
+      renderPhase2QuickStrip();
+
+      if (state.phase2Items.length > 0) {
+        selectPhase2ImageByIndex(initialIndex);
+      } else {
+        dom.currentBadgeIndex.textContent = `0 / 0 [Pool ${category}]`;
+        dom.currentImageName.textContent = 'No hay imágenes en este filtro';
+        dom.currentCategoryBadge.textContent = 'VACÍO';
+        dom.mainInspectImage.src = '';
+      }
+
+      saveSessionState();
+    } catch (e) {
+      console.error(e);
+      showToast(`Error: ${e.message}`, 'error');
+    } finally {
+      dom.imageLoadingOverlay.style.display = 'none';
+    }
+  }
+
+  function updatePhase2TransferButton() {
+    if (!dom.btnP2Transfer) return;
+    const isR = state.phase2Category === 'R';
+    const targetCat = isR ? 'S' : 'R';
+    const targetTitle = isR ? 'PASAR A SIN DEFECTO (S)' : 'PASAR A CON DEFECTO (R)';
+    const targetDesc = isR ? 'Reclasificar como sana y transferir a Pool S' : 'Reclasificar con defecto y transferir a Pool R';
+    const shortcutKey = isR ? 'S' : 'R';
+
+    const titleEl = dom.btnP2Transfer.querySelector('.btn-title');
+    const descEl = dom.btnP2Transfer.querySelector('.btn-desc');
+    const shortcutEl = dom.btnP2Transfer.querySelector('.key-shortcut');
+
+    if (titleEl) titleEl.textContent = targetTitle;
+    if (descEl) descEl.textContent = targetDesc;
+    if (shortcutEl) {
+      shortcutEl.textContent = shortcutKey;
+      shortcutEl.className = `key-shortcut shortcut-${targetCat.toLowerCase()}`;
+    }
+    dom.btnP2Transfer.title = `Presiona [${shortcutKey}] o [C] para mover a ${isR ? 'Sin Defecto' : 'Con Defecto'}`;
+  }
+
+  function updatePhase2Stats(stats) {
+    if (!stats) return;
+
+    dom.p2PoolRCount.textContent = `${stats.total_r.toLocaleString()} fotos`;
+    dom.p2PoolSCount.textContent = `${stats.total_s.toLocaleString()} fotos`;
+    if (dom.p2PoolDCount && stats.total_d !== undefined) {
+      dom.p2PoolDCount.textContent = `${stats.total_d.toLocaleString()} fotos`;
+    }
+
+    const goal = stats.target_goal || 1500;
+    if (dom.bGoalVal) {
+      dom.bGoalVal.textContent = `${goal.toLocaleString()} R / ${goal.toLocaleString()} S`;
+    }
+
+    // Diferencia y Ratio
+    if (stats.difference > 0) {
+      dom.bDiffVal.textContent = `+${stats.difference.toLocaleString()} R`;
+      dom.bDiffVal.className = 'b-val highlight-diff';
+    } else if (stats.difference < 0) {
+      dom.bDiffVal.textContent = `+${Math.abs(stats.difference).toLocaleString()} S`;
+      dom.bDiffVal.className = 'b-val highlight-diff';
+    } else {
+      dom.bDiffVal.textContent = '0 (1:1 Exacto)';
+      dom.bDiffVal.className = 'b-val';
+    }
+
+    const pctR = stats.pct_r !== undefined ? stats.pct_r : 50;
+    const pctS = stats.pct_s !== undefined ? stats.pct_s : 50;
+    dom.bRatioVal.textContent = `${pctR}% R / ${pctS}% S`;
+
+    dom.barFillR.style.width = `${pctR}%`;
+    dom.barFillS.style.width = `${pctS}%`;
+
+    const surplusR = stats.surplus_r !== undefined ? stats.surplus_r : Math.max(0, stats.total_r - goal);
+    const surplusS = stats.surplus_s !== undefined ? stats.surplus_s : Math.max(0, stats.total_s - goal);
+    const isGoalReached = (stats.total_r === goal && stats.total_s === goal);
+
+    // Status Badge & Hint hacia la meta de 1,500
+    if (state.phase2Category === 'D') {
+      const dTotal = stats.total_d !== undefined ? stats.total_d : (state.phase2Items ? state.phase2Items.length : 0);
+      dom.bStatusBadge.textContent = `🟡 Revisando Dudosas: ${dTotal.toLocaleString()} fotos`;
+      dom.bStatusBadge.classList.remove('is-perfect');
+      dom.balanceHintTitle.textContent = `Resolución de Imágenes Dudosas (${dTotal.toLocaleString()} restantes)`;
+      dom.balanceHintDesc.textContent = `Asigna cada duda a Con Defecto [R] o Sin Defecto [S] para balancear las clases (meta: 1,500 por grupo), o descártala [X] si no es aprovechable.`;
+    } else if (isGoalReached) {
+      dom.bStatusBadge.textContent = `🎉 ¡Meta de ${goal.toLocaleString()} por grupo alcanzada!`;
+      dom.bStatusBadge.classList.add('is-perfect');
+      dom.balanceHintTitle.textContent = `¡Dataset Equilibrado a ${goal.toLocaleString()} por Grupo!`;
+      dom.balanceHintDesc.textContent = `Hay exactamente ${stats.total_r.toLocaleString()} fotos en R y ${stats.total_s.toLocaleString()} en S (Total: ${(goal * 2).toLocaleString()} fotos listas para YOLO).`;
+    } else {
+      dom.bStatusBadge.classList.remove('is-perfect');
+      const isR = state.phase2Category === 'R';
+      const curPoolCount = isR ? stats.total_r : stats.total_s;
+      const curSurplus = isR ? surplusR : surplusS;
+      const poolLetter = isR ? 'R' : 'S';
+
+      if (curSurplus > 0) {
+        dom.bStatusBadge.textContent = `🎯 Pool ${poolLetter}: Sobran ${curSurplus.toLocaleString()} fotos`;
+        dom.balanceHintTitle.textContent = `Meta Pool ${poolLetter}: Llegar a ${goal.toLocaleString()} fotos`;
+        dom.balanceHintDesc.textContent = `Tienes ${curPoolCount.toLocaleString()} fotos en ${poolLetter}. Sobran ${curSurplus.toLocaleString()} fotos para descartar o transferir hasta alcanzar ${goal.toLocaleString()}.`;
+      } else if (curPoolCount < goal) {
+        const needed = goal - curPoolCount;
+        dom.bStatusBadge.textContent = `🎯 Pool ${poolLetter}: Faltan ${needed.toLocaleString()} fotos`;
+        dom.balanceHintTitle.textContent = `Meta Pool ${poolLetter}: ${goal.toLocaleString()} fotos`;
+        dom.balanceHintDesc.textContent = `Tienes ${curPoolCount.toLocaleString()} fotos en ${poolLetter} (faltan ${needed.toLocaleString()} para la meta). Transfiere fotos mal clasificadas desde el otro pool.`;
+      } else {
+        dom.bStatusBadge.textContent = `✓ Pool ${poolLetter}: ${goal.toLocaleString()} fotos exactas`;
+        dom.balanceHintTitle.textContent = `¡Pool ${poolLetter} completado en ${goal.toLocaleString()}!`;
+        dom.balanceHintDesc.textContent = `Este grupo ya tiene exactamente la cuota de ${goal.toLocaleString()} fotos. Revisa el otro grupo para completar el balance 1:1.`;
+      }
+    }
+  }
+
+  function selectPhase2ImageByIndex(index) {
+    if (!state.phase2Items || state.phase2Items.length === 0) return;
+    if (index < 0) index = 0;
+    if (index >= state.phase2Items.length) index = state.phase2Items.length - 1;
+
+    state.phase2Index = index;
+    const item = state.phase2Items[index];
+    state.currentImage = item;
+
+    dom.currentBadgeIndex.textContent = `#${index + 1} / ${state.phase2Items.length} [Pool ${state.phase2Category}]`;
+    dom.currentImageName.textContent = item.filename;
+
+    updatePhase2Badge(item);
+
+    // Metadatos
+    dom.metaFruitId.textContent = item.fruit_id;
+    dom.metaStorageGroup.textContent = item.storage_group;
+    dom.metaDay.textContent = `Día ${item.day}`;
+    dom.metaView.textContent = `Vista ${item.view.toUpperCase()}`;
+    dom.metaRipening.textContent = `Estadío ${item.ripening_stage}`;
+    dom.metaTimestamp.textContent = item.time_stamp || 'N/A';
+
+    dom.inputPhase2Note.value = item.decision ? (item.decision.note || '') : '';
+
+    loadMainImage(`/api/image/${encodeURIComponent(item.image_id)}`);
+    highlightQuickStripActive(item.image_id);
+    loadFruitComparison(item.fruit_id, item.image_id);
+    saveSessionState();
+  }
+
+  function updatePhase2Badge(item) {
+    dom.currentCategoryBadge.className = 'badge-status-current';
+    const isKept = item && ((item.phase2_reviewed && item.phase2_action === 'kept') || (item.decision && item.decision.phase2_reviewed && item.decision.phase2_action === 'kept'));
+    if (isKept) {
+      dom.currentCategoryBadge.classList.add(`is-${state.phase2Category.toLowerCase()}`);
+      dom.currentCategoryBadge.textContent = state.phase2Category === 'D' ? '✓ REVISADA (DUDOSA)' : `✓ MANTENIDA (${state.phase2Category})`;
+    } else {
+      dom.currentCategoryBadge.classList.add('is-pending');
+      dom.currentCategoryBadge.textContent = state.phase2Category === 'D' ? 'DUDOSA POR RESOLVER (D)' : `POR REVISAR (${state.phase2Category})`;
+    }
+  }
+
+  const PHASE2_STRIP_WINDOW = 40;
+
+  function renderPhase2QuickStrip() {
+    dom.batchQuickStrip.innerHTML = '';
+    if (!state.phase2Items || state.phase2Items.length === 0) return;
+
+    const total = state.phase2Items.length;
+    const current = Math.min(Math.max(0, state.phase2Index || 0), total - 1);
+    const half = Math.floor(PHASE2_STRIP_WINDOW / 2);
+
+    let start = Math.max(0, current - half);
+    let end = Math.min(total, start + PHASE2_STRIP_WINDOW);
+    if (end - start < PHASE2_STRIP_WINDOW) {
+      start = Math.max(0, end - PHASE2_STRIP_WINDOW);
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    for (let idx = start; idx < end; idx++) {
+      const item = state.phase2Items[idx];
+      const div = document.createElement('div');
+      div.className = 'quick-thumb';
+      div.id = `qthumb-${item.global_index}`;
+      div.title = `${item.filename} (#${idx + 1} de ${total})`;
+
+      if (idx === current) {
+        div.classList.add('active');
+      }
+
+      const isKept = (item.phase2_reviewed && item.phase2_action === 'kept') ||
+                     (item.decision && item.decision.phase2_reviewed && item.decision.phase2_action === 'kept');
+      if (isKept) {
+        div.classList.add('is-kept');
+      } else {
+        div.classList.add(`is-${state.phase2Category.toLowerCase()}`);
+        div.classList.add('is-pending');
+      }
+
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.src = `/api/thumbnail/${encodeURIComponent(item.image_id)}`;
+      img.alt = item.filename;
+
+      div.appendChild(img);
+      const targetIdx = idx;
+      div.addEventListener('click', () => {
+        selectPhase2ImageByIndex(targetIdx);
+      });
+
+      fragment.appendChild(div);
+    }
+
+    dom.batchQuickStrip.appendChild(fragment);
+
+    const activeThumb = dom.batchQuickStrip.querySelector('.quick-thumb.active');
+    if (activeThumb) {
+      activeThumb.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    }
+  }
+
+  async function performPhase2Action(action, targetCategory = null) {
+    if (!state.currentImage || state.isSaving) return;
+    state.isSaving = true;
+
+    const currentItem = state.currentImage;
+    const imageId = currentItem.image_id;
+    const note = dom.inputPhase2Note.value.trim();
+
+    try {
+      let resolvedTargetCat = targetCategory;
+      if (action === 'transfer' && !resolvedTargetCat) {
+        resolvedTargetCat = state.phase2Category === 'R' ? 'S' : 'R';
+      }
+
+      const res = await fetch('/api/phase2/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_id: imageId,
+          action: action,
+          target_category: resolvedTargetCat,
+          category: state.phase2Category,
+          note: note
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al ejecutar acción');
+
+      if (action === 'keep') {
+        const poolMsg = state.phase2Category === 'D' ? 'Dudosas (D)' : `Pool ${state.phase2Category}`;
+        showToast(`✓ Mantenida: ${currentItem.filename} en ${poolMsg}`, `toast-${state.phase2Category.toLowerCase()}`);
+        currentItem.phase2_reviewed = true;
+        currentItem.phase2_action = 'kept';
+        if (currentItem.decision) {
+          currentItem.decision.phase2_reviewed = true;
+          currentItem.decision.phase2_action = 'kept';
+        }
+      } else if (action === 'transfer') {
+        const targetName = resolvedTargetCat === 'S' ? 'Sin Defecto (S)' : 'Con Defecto (R)';
+        showToast(`🔄 Reclasificada: ${currentItem.filename} asignada a ${targetName}`, `toast-${resolvedTargetCat.toLowerCase()}`);
+        state.phase2Items = state.phase2Items.filter(it => it.image_id !== imageId);
+      } else if (action === 'discard') {
+        showToast(`🗑️ Descartada: ${currentItem.filename} -> Grupo general de descartadas`, 'toast-x');
+        state.phase2Items = state.phase2Items.filter(it => it.image_id !== imageId);
+      }
+
+      updatePhase2Stats(data.stats);
+
+      // Avance a la siguiente foto
+      const autoAdvance = !dom.chkPhase2AutoAdvance || dom.chkPhase2AutoAdvance.checked;
+      if (autoAdvance) {
+        if (action === 'discard' || action === 'transfer') {
+          if (state.phase2Index >= state.phase2Items.length) {
+            state.phase2Index = Math.max(0, state.phase2Items.length - 1);
+          }
+          if (state.phase2Items.length > 0) {
+            selectPhase2ImageByIndex(state.phase2Index);
+          } else {
+            showToast(`¡No quedan más imágenes en el Pool ${state.phase2Category}!`, 'info');
+          }
+        } else {
+          if (state.phase2Index < state.phase2Items.length - 1) {
+            selectPhase2ImageByIndex(state.phase2Index + 1);
+          } else {
+            showToast(`¡Has llegado al final del Pool ${state.phase2Category}!`, 'info');
+          }
+        }
+      } else {
+        if (action === 'discard' || action === 'transfer') {
+          if (state.phase2Index >= state.phase2Items.length) {
+            state.phase2Index = Math.max(0, state.phase2Items.length - 1);
+          }
+          if (state.phase2Items.length > 0) {
+            selectPhase2ImageByIndex(state.phase2Index);
+          }
+        } else {
+          updatePhase2Badge(currentItem);
+        }
+      }
+
+      // Actualizar estado global sin bloquear la interfaz
+      loadGlobalStatus().catch(() => {});
+    } catch (e) {
+      console.error(e);
+      showToast(`Error: ${e.message}`, 'error');
+    } finally {
+      state.isSaving = false;
+    }
+  }
+
+  // --- DESHACER (UNDO) ---
+  async function performUndo(steps = 1) {
+    if (state.isUndoing || state.isSaving) return;
+    state.isUndoing = true;
+    try {
+      const cleanSteps = (typeof steps === 'number' && !isNaN(steps) && steps >= 1) ? Math.floor(steps) : 1;
+      const res = await fetch('/api/undo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steps: cleanSteps })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Error ${res.status} del servidor`);
+      }
       const data = await res.json();
 
       if (data.status === 'empty') {
@@ -619,14 +1095,29 @@
         return;
       }
 
-      showToast(`Deshecha acción en ${data.image_id}`, 'info');
+      const countMsg = data.undone_count > 1 ? `${data.undone_count} acciones deshechas` : `Acción deshecha en ${data.image_id}`;
+      const remainMsg = data.remaining_undo_count !== undefined ? ` (Disponibles: ${data.remaining_undo_count})` : '';
+      showToast(`↺ ${countMsg}${remainMsg}`, 'info');
 
-      // Recargar lote actual y estado global
-      await loadBatch(state.currentBatchId, data.image_id);
-      await loadGlobalStatus();
+      // Recargar lote o pool de Fase 2 y estado global
+      if (state.activePhase === 'phase2') {
+        const targetPool = (data.restored_state && ['R', 'S', 'D'].includes(data.restored_state.category))
+          ? data.restored_state.category
+          : state.phase2Category;
+        if (state.phase2Category !== targetPool) {
+          state.phase2Category = targetPool;
+          updatePoolButtonsUI(targetPool);
+        }
+        await loadPhase2Pool(state.phase2Category, state.phase2Filter, data.image_id);
+      } else {
+        await loadBatch(state.currentBatchId, data.image_id);
+      }
+      loadGlobalStatus().catch(() => {});
     } catch (e) {
       console.error(e);
-      showToast('Error al deshacer', 'error');
+      showToast(`Error al deshacer: ${e.message}`, 'error');
+    } finally {
+      state.isUndoing = false;
     }
   }
 
@@ -835,14 +1326,22 @@
   // --- SESIÓN PERSISTENTE ---
   async function saveSessionState() {
     try {
+      const payload = {
+        active_phase: state.activePhase,
+        active_filter: state.filter
+      };
+      if (state.activePhase === 'phase2') {
+        payload.phase2_category = state.phase2Category;
+        payload.phase2_image_id = state.currentImage ? state.currentImage.image_id : null;
+      } else {
+        payload.batch_id = state.currentBatchId;
+        payload.image_id = state.currentImage ? state.currentImage.image_id : null;
+      }
+
       await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batch_id: state.currentBatchId,
-          image_id: state.currentImage ? state.currentImage.image_id : null,
-          active_filter: state.filter
-        })
+        body: JSON.stringify(payload)
       });
     } catch (e) {
       // Ignorar fallas silenciosas de sesión
@@ -873,7 +1372,105 @@
 
   // --- EVENT LISTENERS GENERALES Y ATAJOS ---
   function setupEventListeners() {
-    // Botones de Lote
+    // Pestañas de Navegación de Fase
+    if (dom.tabPhase1) {
+      dom.tabPhase1.addEventListener('click', () => switchPhase('phase1'));
+    }
+    if (dom.tabPhase2) {
+      dom.tabPhase2.addEventListener('click', () => switchPhase('phase2'));
+    }
+
+    // Selectores de Pool de Fase 2
+    if (dom.btnPoolR) {
+      dom.btnPoolR.addEventListener('click', () => {
+        state.phase2Category = 'R';
+        updatePoolButtonsUI('R');
+        loadPhase2Pool('R', state.phase2Filter);
+      });
+    }
+    if (dom.btnPoolS) {
+      dom.btnPoolS.addEventListener('click', () => {
+        state.phase2Category = 'S';
+        updatePoolButtonsUI('S');
+        loadPhase2Pool('S', state.phase2Filter);
+      });
+    }
+    if (dom.btnPoolD) {
+      dom.btnPoolD.addEventListener('click', () => {
+        state.phase2Category = 'D';
+        updatePoolButtonsUI('D');
+        loadPhase2Pool('D', state.phase2Filter);
+      });
+    }
+
+    // Filtros de Pool en Fase 2
+    dom.p2FilterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        dom.p2FilterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.phase2Filter = btn.dataset.p2filter || 'all';
+        loadPhase2Pool(state.phase2Category, state.phase2Filter);
+      });
+    });
+
+    // Botones de Decisión de Fase 2 (MANTENER / TRANSFERIR / DESCARTAR)
+    if (dom.btnP2Keep) {
+      dom.btnP2Keep.addEventListener('click', () => performPhase2Action('keep'));
+    }
+    if (dom.btnP2Transfer) {
+      dom.btnP2Transfer.addEventListener('click', () => performPhase2Action('transfer'));
+    }
+    if (dom.btnP2Discard) {
+      dom.btnP2Discard.addEventListener('click', () => performPhase2Action('discard'));
+    }
+    if (dom.btnP2ToR) {
+      dom.btnP2ToR.addEventListener('click', () => performPhase2Action('transfer', 'R'));
+    }
+    if (dom.btnP2ToS) {
+      dom.btnP2ToS.addEventListener('click', () => performPhase2Action('transfer', 'S'));
+    }
+    if (dom.btnP2DiscardD) {
+      dom.btnP2DiscardD.addEventListener('click', () => performPhase2Action('discard'));
+    }
+    if (dom.btnP2KeepD) {
+      dom.btnP2KeepD.addEventListener('click', () => performPhase2Action('keep'));
+    }
+    if (dom.btnP2Undo) {
+      dom.btnP2Undo.addEventListener('click', () => performUndo(1));
+    }
+    if (dom.btnP2ResetRound) {
+      dom.btnP2ResetRound.addEventListener('click', async () => {
+        let catName = 'Con Defecto (R)';
+        let curCount = dom.p2PoolRCount.textContent;
+        if (state.phase2Category === 'S') {
+          catName = 'Sin Defecto (S)';
+          curCount = dom.p2PoolSCount.textContent;
+        } else if (state.phase2Category === 'D') {
+          catName = 'Dudosas (D)';
+          curCount = dom.p2PoolDCount ? dom.p2PoolDCount.textContent : '293 fotos';
+        }
+        const ok = confirm(`¿Iniciar una nueva ronda de repaso para el grupo ${catName} (${curCount})?\n\nLas fotos que ya descartaste o transferiste se mantendrán de forma segura. Esta acción habilitará todas las fotos activas restantes para que puedas revisarlas desde la foto #1.`);
+        if (!ok) return;
+
+        try {
+          const res = await fetch('/api/phase2/reset_round', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category: state.phase2Category })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Error al reiniciar ronda');
+
+          showToast(`🔄 Nueva ronda iniciada: ${data.result.reset_count} fotos listas para repasar`, 'info');
+          await loadPhase2Pool(state.phase2Category, 'all');
+        } catch (e) {
+          console.error(e);
+          showToast(`Error al iniciar nueva ronda: ${e.message}`, 'error');
+        }
+      });
+    }
+
+    // Botones de Lote (Fase 1)
     dom.batchSelect.addEventListener('change', (e) => {
       loadBatch(parseInt(e.target.value));
     });
@@ -912,12 +1509,22 @@
 
     // Navegación Anterior / Siguiente en Inspector
     dom.btnNavPrev.addEventListener('click', () => {
-      if (state.currentBatchIndex > 0) selectImageByIndex(state.currentBatchIndex - 1);
+      if (state.activePhase === 'phase2') {
+        if (state.phase2Index > 0) selectPhase2ImageByIndex(state.phase2Index - 1);
+      } else {
+        if (state.currentBatchIndex > 0) selectImageByIndex(state.currentBatchIndex - 1);
+      }
     });
 
     dom.btnNavNext.addEventListener('click', () => {
-      if (state.currentBatchIndex < state.batchItems.length - 1) {
-        selectImageByIndex(state.currentBatchIndex + 1);
+      if (state.activePhase === 'phase2') {
+        if (state.phase2Index < state.phase2Items.length - 1) {
+          selectPhase2ImageByIndex(state.phase2Index + 1);
+        }
+      } else {
+        if (state.currentBatchIndex < state.batchItems.length - 1) {
+          selectImageByIndex(state.currentBatchIndex + 1);
+        }
       }
     });
 
@@ -925,10 +1532,10 @@
     dom.btnActionR.addEventListener('click', () => assignCategory('R'));
     dom.btnActionS.addEventListener('click', () => assignCategory('S'));
     dom.btnActionD.addEventListener('click', () => assignCategory('D'));
-    dom.btnActionX.addEventListener('click', () => openDiscardModal());
+    dom.btnActionX.addEventListener('click', () => assignCategory('X'));
 
     // Acciones del Header
-    dom.btnUndoHeader.addEventListener('click', performUndo);
+    dom.btnUndoHeader.addEventListener('click', () => performUndo(1));
     dom.btnOpenProtocol.addEventListener('click', openProtocolModal);
     dom.btnExportHeader.addEventListener('click', openExportModal);
 
@@ -980,6 +1587,13 @@
         return;
       }
 
+      // Evitar auto-repetición continua al mantener presionadas teclas de acción
+      // (evita descartar o clasificar 2 a 5 imágenes accidentalmente por repetición de teclado)
+      if (e.repeat && ['r', 's', 'd', 'x', 'm', 'c', 'enter', ' ', 'delete', 'backspace', 'z'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        return;
+      }
+
       // Atajo Deshacer (Ctrl + Z)
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
@@ -987,8 +1601,58 @@
         return;
       }
 
-      // Atajos de Clasificación
+      // ATAJOS ESPECÍFICOS SEGÚN FASE ACTIVA
       const key = e.key.toUpperCase();
+
+      if (state.activePhase === 'phase2') {
+        if (state.phase2Category === 'D') {
+          // Atajos específicos para Pool D (Resolución de Dudosas)
+          if (key === 'R') {
+            e.preventDefault();
+            performPhase2Action('transfer', 'R');
+          } else if (key === 'S') {
+            e.preventDefault();
+            performPhase2Action('transfer', 'S');
+          } else if (key === 'X' || key === 'DELETE') {
+            e.preventDefault();
+            performPhase2Action('discard');
+          } else if (key === 'M' || key === 'D' || key === 'ENTER' || e.code === 'Space') {
+            e.preventDefault();
+            performPhase2Action('keep');
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (state.phase2Index > 0) selectPhase2ImageByIndex(state.phase2Index - 1);
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (state.phase2Index < state.phase2Items.length - 1) {
+              selectPhase2ImageByIndex(state.phase2Index + 1);
+            }
+          }
+          return;
+        }
+
+        // Atajos de Fase 2 para Pool R y S: Mantener, Mover de Grupo y Descartar
+        if (key === 'M' || key === 'ENTER' || e.code === 'Space') {
+          e.preventDefault();
+          performPhase2Action('keep');
+        } else if (key === 'X' || key === 'DELETE') {
+          e.preventDefault();
+          performPhase2Action('discard');
+        } else if (key === 'C' || (state.phase2Category === 'R' && key === 'S') || (state.phase2Category === 'S' && key === 'R')) {
+          e.preventDefault();
+          performPhase2Action('transfer');
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          if (state.phase2Index > 0) selectPhase2ImageByIndex(state.phase2Index - 1);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          if (state.phase2Index < state.phase2Items.length - 1) {
+            selectPhase2ImageByIndex(state.phase2Index + 1);
+          }
+        }
+        return;
+      }
+
       if (key === 'R') {
         e.preventDefault();
         assignCategory('R');
@@ -1000,8 +1664,8 @@
         assignCategory('D');
       } else if (key === 'X') {
         e.preventDefault();
-        openDiscardModal();
-      } else if (e.key === 'ArrowLeft') {
+        assignCategory('X');
+      } else if (key === 'ArrowLeft') {
         e.preventDefault();
         if (state.currentBatchIndex > 0) selectImageByIndex(state.currentBatchIndex - 1);
       } else if (e.key === 'ArrowRight') {

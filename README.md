@@ -48,7 +48,7 @@ http://127.0.0.1:5000/
 | **`R`** | **Con defecto visible** | Lesión suberosa compatible con roña | Guarda etiqueta provisional y avanza a la siguiente pendiente. |
 | **`S`** | **Sin defecto visible** | No se observa la lesión objetivo en esta toma | Guarda decisión y avanza a la siguiente pendiente. |
 | **`D`** | **Dudosa** | Incertidumbre visual (iluminación, sombra, lesión incipiente) | Registra para segunda revisión (cuenta como revisada para cerrar el lote). |
-| **`X`** | **Descartada / No utilizable** | Imagen no evaluable | Despliega modal para seleccionar motivo obligatorio (desenfoque, deterioro, etc.). |
+| **`X`** | **Descartada / No utilizable** | Imagen no evaluable | Guarda decisión directa de descarte y avanza a la siguiente pendiente. |
 | **`Ctrl + Z`** | **Deshacer** | Revertir última acción | Restaura la decisión o estado previo desde la bitácora transaccional. |
 | **`←` / `→`** | **Navegación** | Anterior / Siguiente imagen | Desplaza libremente la inspección dentro del lote. |
 
@@ -70,6 +70,18 @@ En la barra lateral derecha verás automáticamente las demás tomas asociadas a
 3. Cuando el contador de pendientes del lote llega a **0**, aparece el banner verde: **"¡Lote completado al 100%!"**.
 4. Haz clic en **"Continuar al Siguiente Lote ▶"** para pasar al Lote 2 sin necesidad de reiniciar el servidor.
 5. Puedes regresar a cualquier lote anterior en cualquier momento mediante el selector desplegable.
+
+### 3.5. Fase 2: Curación y Balanceo de Clases (R vs S)
+Una vez completada la clasificación general inicial, se accede a la pestaña superior **"⚖️ FASE 2: Curación y Balanceo R vs S"**:
+- **Objetivo:** Repasar y depurar exclusivamente las fotografías de las clases activas (**Con Defecto Visible [R]** y **Sin Defecto Visible [S]**) para conseguir un balance equitativo exacto de **1.500 fotos por grupo** (Total: 3.000 imágenes equilibradas para entrenamiento YOLO).
+- **Selector de Pool:** Permite alternar entre repasar el grupo `R` (actualmente 2.400 fotos, sobrando 900) o el grupo `S` (actualmente 1.555 fotos, sobrando 55).
+- **Monitor de Meta y Balance en Tiempo Real:** Muestra el objetivo configurado (`1.500 R / 1.500 S`), la cantidad de fotos sobrantes a descartar para alcanzar la meta en cada pool, el porcentaje relativo y el aviso dinámico de meta alcanzada.
+- **Rondas Sucesivas de Repaso (`🔄 Iniciar Nueva Ronda`):** Permite reiniciar las marcas de revisión de las fotos activas en cualquier momento para repetir el flujo de filtrado desde la foto #1, manteniendo intactas todas las imágenes ya descartadas (X).
+- **Tres Botones de Decisión y Corrección en Fase 2:**
+  - **`MANTENER FOTO`** (Atajos: `M`, `Enter`, `Espacio`): Confirma la imagen en el conjunto balanceado actual y avanza a la siguiente.
+  - **`PASAR A SIN DEFECTO (S)` / `PASAR A CON DEFECTO (R)`** (Atajos: `S` o `C` si estás en R; `R` o `C` si estás en S): Reclasifica la imagen y la transfiere al grupo opuesto, corrigiendo fotos sanas que fueron erróneamente marcadas con defecto (o viceversa) y actualizando el balance en tiempo real.
+  - **`DESCARTAR FOTO`** (Atajos: `X`, `Supr`): Desplaza inmediatamente la foto al grupo general de descartadas (`X`), disminuyendo el pool y actualizando los contadores de balance en tiempo real.
+- **Deshacer Persistente (`Ctrl + Z` o botón `↺ Deshacer`):** Revierte al instante cualquier acción (mantenida, transferida o descartada), recuperando la fotografía en orden cronológico inverso.
 
 ---
 
@@ -164,7 +176,7 @@ La suite automatizada `verificar_sistema.py` valida:
 - [x] Partición exacta en 59 lotes (58 lotes de 250 imágenes + 1 lote de 210 imágenes).
 - [x] Asociación consistente de 478 frutas únicas (`fruit_id`).
 - [x] Asignación y persistencia atómica de las cuatro bandejas (R, S, D, X).
-- [x] Obligatoriedad de motivo al descartar (X).
+- [x] Descarte ágil directo e inmediato (X) sin bloquear el flujo.
 - [x] Historial auditable para deshacer (`Ctrl+Z`) y reclasificación.
 - [x] Reanudación de sesión al reiniciar el servidor.
 - [x] Detección de lote completado y registro de resumen.

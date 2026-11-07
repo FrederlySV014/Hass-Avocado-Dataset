@@ -1,0 +1,60 @@
+{
+  "dataset_name": "Hass Avocado Ripening Photographic Dataset - Balanced Curation",
+  "created_at": "2026-11-07T02:49:52.677582Z",
+  "purpose": "Dataset balanceado para etiquetado de defectos (roña) y entrenamiento de modelos YOLO",
+  "total_images": 3000,
+  "total_size_mb": 90.97,
+  "categories": {
+    "con_defecto": {
+      "category_code": "R",
+      "count": 1500,
+      "folder": "dataset_etiquetado/con_defecto",
+      "breakdown": {
+        "by_view": {
+          "a": 961,
+          "b": 539
+        },
+        "by_group": {
+          "T10": 1093,
+          "T20": 233,
+          "Tam": 174
+        },
+        "by_ripening_stage": {
+          "1": 429,
+          "2": 206,
+          "3": 287,
+          "4": 321,
+          "5": 257
+        },
+        "unique_fruits": 197
+      }
+    },
+    "sin_defecto": {
+      "category_code": "S",
+      "count": 1500,
+      "folder": "dataset_etiquetado/sin_defecto",
+      "breakdown": {
+        "by_view": {
+          "b": 769,
+          "a": 731
+        },
+        "by_group": {
+          "T10": 741,
+          "T20": 449,
+          "Tam": 310
+        },
+        "by_ripening_stage": {
+          "1": 293,
+          "2": 313,
+          "3": 357,
+          "4": 350,
+          "5": 187
+        },
+        "unique_fruits": 196
+      }
+    }
+  },
+  "balance_ratio": "1500 : 1500 (1:1 Exacto)",
+  "errors_count": 0,
+  "errors": []
+}

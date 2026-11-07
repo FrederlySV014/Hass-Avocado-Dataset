@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=7">
 </head>
 <body class="theme-dark">
 
@@ -74,6 +74,89 @@
       </button>
     </div>
   </header>
+
+  <!-- PHASE NAVIGATION TABS -->
+  <div class="phase-switcher-bar">
+    <div class="phase-tabs-wrap">
+      <button class="phase-tab-btn active" id="tab-phase-1" data-phase="phase1">
+        <span class="phase-badge">FASE 1</span>
+        <div class="phase-tab-info">
+          <span class="phase-tab-title">Clasificación por Lotes</span>
+          <span class="phase-tab-sub">14.710 fotos en 59 Lotes</span>
+        </div>
+      </button>
+      <button class="phase-tab-btn" id="tab-phase-2" data-phase="phase2">
+        <span class="phase-badge badge-p2">FASE 2</span>
+        <div class="phase-tab-info">
+          <span class="phase-tab-title">Curación y Balanceo R vs S</span>
+          <span class="phase-tab-sub">Repaso y Equilibrio de Clases</span>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- PHASE 2: BALANCE & POOL CONTROL BAR -->
+  <div class="phase2-bar" id="phase2-bar" style="display: none;">
+    <!-- POOL SELECTOR BUTTONS -->
+    <div class="phase2-pool-selector">
+      <button class="btn-pool active" id="btn-pool-r" data-category="R">
+        <span class="pool-dot dot-r"></span>
+        <div class="pool-text">
+          <span class="pool-name">Con Defecto Visible (R)</span>
+          <span class="pool-count" id="p2-pool-r-count">4,679 fotos</span>
+        </div>
+      </button>
+      <button class="btn-pool" id="btn-pool-s" data-category="S">
+        <span class="pool-dot dot-s"></span>
+        <div class="pool-text">
+          <span class="pool-name">Sin Defecto Visible (S)</span>
+          <span class="pool-count" id="p2-pool-s-count">3,232 fotos</span>
+        </div>
+      </button>
+      <button class="btn-pool" id="btn-pool-d" data-category="D">
+        <span class="pool-dot dot-d"></span>
+        <div class="pool-text">
+          <span class="pool-name">Dudosas (D)</span>
+          <span class="pool-count" id="p2-pool-d-count">293 fotos</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- BALANCE MONITOR WIDGET -->
+    <div class="balance-monitor" id="balance-monitor">
+      <div class="balance-stats-row">
+        <div class="balance-stat-item">
+          <span class="b-lbl">Meta por Grupo:</span>
+          <span class="b-val highlight-diff" id="b-goal-val">1,500 R / 1,500 S</span>
+        </div>
+        <div class="balance-stat-item">
+          <span class="b-lbl">Diferencia R vs S:</span>
+          <span class="b-val highlight-diff" id="b-diff-val">+845 R</span>
+        </div>
+        <div class="balance-stat-item">
+          <span class="b-lbl">Equilibrio:</span>
+          <span class="b-val" id="b-ratio-val">60.7% R / 39.3% S</span>
+        </div>
+        <div class="balance-stat-item balance-badge-wrap">
+          <span class="balance-status-badge" id="b-status-badge">⚖️ Meta: 1,500 por grupo</span>
+        </div>
+      </div>
+      <div class="balance-bar-visual">
+        <div class="bar-fill-r" id="bar-fill-r" style="width: 60.7%" title="Porcentaje R"></div>
+        <div class="bar-fill-s" id="bar-fill-s" style="width: 39.3%" title="Porcentaje S"></div>
+      </div>
+    </div>
+
+    <!-- POOL SUB-FILTER & ROUND ACTIONS -->
+    <div class="phase2-filter-group">
+      <button class="filter-btn active" data-p2filter="all" id="p2-filter-all">Todas</button>
+      <button class="filter-btn" data-p2filter="pending" id="p2-filter-pending">Pendientes de Repaso</button>
+      <button class="filter-btn" data-p2filter="kept" id="p2-filter-kept">Mantenidas</button>
+      <button class="btn-round-reset" id="btn-p2-reset-round" type="button" title="Reiniciar marcas para repetir la pasada de depuración en las fotos actuales sin perder descartes">
+        🔄 Iniciar Nueva Ronda
+      </button>
+    </div>
+  </div>
 
   <!-- BATCH CONTROL BAR -->
   <div class="batch-bar" id="batch-bar">
@@ -212,8 +295,8 @@
           </div>
         </div>
 
-        <!-- CLASSIFICATION DECISION BUTTONS -->
-        <div class="side-card action-card">
+        <!-- CLASSIFICATION DECISION BUTTONS (PHASE 1) -->
+        <div class="side-card action-card" id="phase1-action-card">
           <div class="card-header-row">
             <h3 class="card-title">Asignar Categoría</h3>
             <span class="shortcut-tip">Usa atajos [R, S, D, X]</span>
@@ -244,7 +327,7 @@
               <span class="btn-desc">Incertidumbre visual. Requiere 2da revisión</span>
             </button>
 
-            <button class="btn-decision btn-x" id="btn-action-x" title="Presiona [X] para Descartar con Motivo">
+            <button class="btn-decision btn-x" id="btn-action-x" title="Presiona [X] para Descartar">
               <div class="btn-top">
                 <span class="key-shortcut">X</span>
                 <span class="btn-title">Descartada</span>
@@ -265,6 +348,110 @@
               <input type="checkbox" id="chk-auto-advance" checked>
               <span>Avanzar automáticamente a la siguiente pendiente</span>
             </label>
+          </div>
+        </div>
+
+        <!-- PHASE 2: REVIEW & BALANCE ACTIONS (TWO BUTTONS ONLY) -->
+        <div class="side-card action-card-phase2" id="phase2-action-card" style="display: none;">
+          <div class="card-header-row">
+            <h3 class="card-title" id="phase2-card-title">Curación de Fase 2</h3>
+            <span class="shortcut-tip" id="phase2-shortcut-tip">[M] Mantener • [S/C] Mover • [X] Descartar</span>
+          </div>
+
+          <!-- BOTONES PARA POOL R Y POOL S (CURACIÓN Y BALANCEO) -->
+          <div class="phase2-buttons-grid" id="phase2-curation-grid">
+            <button class="btn-p2-action btn-p2-keep" id="btn-p2-keep" title="Presiona [M], [Enter] o [Espacio] para Mantener Foto">
+              <div class="btn-top">
+                <span class="key-shortcut shortcut-m">M</span>
+                <span class="btn-title">MANTENER FOTO</span>
+              </div>
+              <span class="btn-desc">Confirmar foto en este grupo y continuar</span>
+            </button>
+
+            <!-- MOVER ENTRE GRUPOS R Y S -->
+            <button class="btn-p2-action btn-p2-transfer" id="btn-p2-transfer" title="Presiona [S] o [C] para mover a Sin Defecto">
+              <div class="btn-top">
+                <span class="key-shortcut shortcut-s">S</span>
+                <span class="btn-title">PASAR A SIN DEFECTO (S)</span>
+              </div>
+              <span class="btn-desc">Reclasificar como sana y transferir a Pool S</span>
+            </button>
+
+            <button class="btn-p2-action btn-p2-discard" id="btn-p2-discard" title="Presiona [X], [Supr] para Descartar Foto">
+              <div class="btn-top">
+                <span class="key-shortcut shortcut-x">X</span>
+                <span class="btn-title">DESCARTAR FOTO</span>
+              </div>
+              <span class="btn-desc">Mover al grupo general de descartadas</span>
+            </button>
+          </div>
+
+          <!-- BOTONES PARA POOL D (RESOLUCIÓN DE DUDOSAS) -->
+          <div class="phase2-buttons-grid" id="phase2-dudosa-grid" style="display: none;">
+            <!-- ASIGNAR A CON DEFECTO (R) -->
+            <button class="btn-p2-action btn-p2-to-r" id="btn-p2-to-r" title="Presiona [R] para asignar como Con Defecto">
+              <div class="btn-top">
+                <span class="key-shortcut shortcut-r">R</span>
+                <span class="btn-title">CON DEFECTO VISIBLE (R)</span>
+              </div>
+              <span class="btn-desc">Confirmar roña/defecto y transferir al Pool R</span>
+            </button>
+
+            <!-- ASIGNAR A SIN DEFECTO (S) -->
+            <button class="btn-p2-action btn-p2-to-s" id="btn-p2-to-s" title="Presiona [S] para asignar como Sin Defecto">
+              <div class="btn-top">
+                <span class="key-shortcut shortcut-s">S</span>
+                <span class="btn-title">SIN DEFECTO VISIBLE (S)</span>
+              </div>
+              <span class="btn-desc">Confirmar fruto sano y transferir al Pool S</span>
+            </button>
+
+            <!-- DESCARTAR (X) -->
+            <button class="btn-p2-action btn-p2-discard" id="btn-p2-discard-d" title="Presiona [X], [Supr] para Descartar Foto">
+              <div class="btn-top">
+                <span class="key-shortcut shortcut-x">X</span>
+                <span class="btn-title">DESCARTAR FOTO (X)</span>
+              </div>
+              <span class="btn-desc">Mover al grupo general de descartadas</span>
+            </button>
+
+            <!-- MANTENER COMO DUDOSA (D) -->
+            <button class="btn-p2-action btn-p2-keep-d" id="btn-p2-keep-d" title="Presiona [M], [D] o [Espacio] para Mantener como Dudosa">
+              <div class="btn-top">
+                <span class="key-shortcut shortcut-d">M</span>
+                <span class="btn-title">MANTENER COMO DUDOSA (D)</span>
+              </div>
+              <span class="btn-desc">Dejar en dudosas y continuar con la siguiente</span>
+            </button>
+          </div>
+
+          <!-- BOTÓN DESHACER EN FASE 2 -->
+          <button class="btn-p2-undo" id="btn-p2-undo" type="button" title="Deshacer última acción en Fase 2 (Ctrl + Z)">
+            <span>↺ Deshacer última acción</span>
+            <span class="undo-tag">Ctrl + Z</span>
+          </button>
+
+          <!-- OPTIONAL NOTE & CURRENT STATUS -->
+          <div class="note-box-container" style="margin-top: 10px;">
+            <label for="input-phase2-note" class="note-label">Nota u Observación (Opcional):</label>
+            <input type="text" id="input-phase2-note" class="input-note" placeholder="Opcional: motivo del descarte o detalle visual...">
+          </div>
+
+          <!-- AUTO-ADVANCE TOGGLE -->
+          <div class="advance-toggle-wrap">
+            <label class="toggle-label" title="Avanzar a la siguiente foto inmediatamente">
+              <input type="checkbox" id="chk-phase2-auto-advance" checked>
+              <span>Avanzar automáticamente a la siguiente foto</span>
+            </label>
+          </div>
+
+          <!-- BALANCE TARGET WIDGET -->
+          <div class="balance-hint-box" id="balance-hint-box">
+            <span class="hint-icon">⚖️</span>
+            <div class="hint-text">
+              <strong id="balance-hint-title">Meta de Balance 1:1</strong>
+              <span id="balance-hint-desc">Calculando balance...</span>
+            </div>
           </div>
         </div>
 
@@ -429,6 +616,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- SCRIPT -->
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=9"></script>
 </body>
 </html>

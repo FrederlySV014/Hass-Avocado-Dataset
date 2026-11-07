@@ -22,3 +22,7 @@ $RECYCLE.BIN/
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Cache files
+data/cache/
+*.pyc

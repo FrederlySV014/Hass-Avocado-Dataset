@@ -58,13 +58,8 @@ La **roña** o sarna del palto es una alteración superficial originada en etapa
 - **Regla de integridad:** **Nunca fuerces una decisión hacia R o S para reducir el porcentaje de dudosas.** Las dudosas protegen la calidad del dataset y son el insumo directo para la sesión de segunda revisión especializada.
 
 ### Bandeja X — Descartada / No utilizable
-- **Definición:** La fotografía no permite evaluar adecuadamente la superficie del fruto o cae fuera de los estándares de inspección.
-- **Motivo obligatorio:** Debe seleccionarse uno de los siguientes motivos preestablecidos (y opcionalmente detallar en notas):
-  1. `desenfoque`: Pérdida de nitidez focal severa en la superficie del fruto.
-  2. `deterioro que impide evaluar`: Pudrición generalizada, invasión fúngica postcosecha masiva que enmascara por completo el exocarpio.
-  3. `superficie relevante oculta`: Obstrucción física, encuadre cortado severo u oclusión mayoritaria.
-  4. `archivo corrupto`: Falla de lectura, artefacto digital de compresión irreparable o imagen trunca.
-  5. `otro`: Causa específica detallada obligatoriamente en el campo de texto.
+- **Definición:** La fotografía no permite evaluar adecuadamente la superficie del fruto o cae fuera de los estándares de inspección (desenfoque severo, deterioro masivo, oclusión relevante, archivo dañado, etc.).
+- **Flujo de selección ágil:** Se asigna de forma directa e inmediata con la tecla **`X`** o el botón correspondiente, sin requerir la selección de un motivo para no ralentizar el ritmo de revisión. Si se desea dejar alguna observación puntual, se puede ingresar libremente en el campo de notas.
 
 ---
 
